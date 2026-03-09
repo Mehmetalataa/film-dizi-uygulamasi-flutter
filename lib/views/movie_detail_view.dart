@@ -1,7 +1,9 @@
 import 'package:film_dizi_uygulamasi/constants/constants.dart';
 import 'package:film_dizi_uygulamasi/models/models.dart';
+import 'package:film_dizi_uygulamasi/services/favorite_service.dart';
 import 'package:film_dizi_uygulamasi/services/services.dart';
 import 'package:flutter/material.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class MovieDetailView extends StatelessWidget {
@@ -12,6 +14,23 @@ class MovieDetailView extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.black,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        actions: [
+          IconButton(
+            onPressed: () {
+              final String appLink = "https://mehmetalata.com.tr";
+              Share.share(
+                'Bu film seninle paylaşmak istedim : ${datas.originalTitle}\n\n'
+                'Detaylar için tıkla: $appLink',
+                subject: datas.originalTitle,
+              );
+            },
+            icon: Icon(Icons.share, color: Colors.white),
+          ),
+         FavoriteButton(movieId: datas.id),
+        ],
+      ),
       body: SingleChildScrollView(
         child: Column(
           children: [
@@ -149,6 +168,58 @@ class MovieDetailView extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+class FavoriteButton extends StatefulWidget {
+  final int movieId;
+  const FavoriteButton({super.key, required this.movieId});
+
+  @override
+  State<FavoriteButton> createState() => _FavoriteButtonState();
+}
+
+class _FavoriteButtonState extends State<FavoriteButton> {
+  bool isFav = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadFavoriteStatus(); 
+  }
+
+  void _loadFavoriteStatus() async {
+    bool result = await FavoriteService.isFavorite(widget.movieId);
+    if (mounted) {
+      setState(() {
+        isFav = result;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return IconButton(
+      icon: Icon(
+        isFav ? Icons.favorite : Icons.favorite_border,
+        color: isFav ? Colors.red : Colors.white,
+      ),
+      onPressed: () async {
+        await FavoriteService.toggleFavorite(widget.movieId);
+        setState(() {
+          isFav = !isFav; // Rengi anında değiştir
+        });
+        
+        ScaffoldMessenger.of(context).clearSnackBars();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(isFav ? "Favorilere eklendi" : "Favorilerden çıkarıldı"),
+            backgroundColor: isFav ? Colors.green : Colors.redAccent,
+            duration: const Duration(milliseconds: 700),
+          ),
+        );
+      },
     );
   }
 }
